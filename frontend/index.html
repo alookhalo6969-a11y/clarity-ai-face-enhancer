@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity - Real-time Face Enhancement</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>Clarity <span class="badge">AI</span></h1>
+            <p>Next-Gen Facial Enhancement & Synthesis</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-target="upload-section">Batch Process</button>
+            <button class="tab-btn" data-target="webcam-section">Live Stream</button>
+        </div>
+
+        <main>
+            <!-- Upload Section -->
+            <section id="upload-section" class="active">
+                <div class="upload-area" id="drop-zone">
+                    <div class="upload-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h2>Drag & Drop Images Here</h2>
+                    <p>or click to browse (up to 10 photos)</p>
+                    <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+                </div>
+                
+                <div id="preview-container" class="preview-grid hidden"></div>
+                
+                <div class="settings hidden" id="settings-container" style="margin-top: 30px; text-align: center;">
+                    <label for="fidelity-slider" style="display: block; margin-bottom: 10px; color: var(--text-muted);">
+                        Enhancement Style: <span id="fidelity-val">✨ Best Quality (Recommended)</span>
+                    </label>
+                    <input type="range" id="fidelity-slider" min="0.1" max="1.0" step="0.1" value="0.5" style="width: 80%; max-width: 300px; accent-color: var(--primary);">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">← More AI Enhancement &nbsp;&nbsp; | &nbsp;&nbsp; More Original →</p>
+                </div>
+                
+                <div class="actions">
+                    <button id="enhance-btn" class="primary-btn disabled">Enhance Selected</button>
+                </div>
+
+                <div id="loading-overlay" class="hidden">
+                    <div class="spinner"></div>
+                    <p>AI is analyzing and enhancing...</p>
+                </div>
+
+                <div id="results-container" class="results-grid hidden">
+                    <h2>Enhancement Results</h2>
+                    <div class="grid" id="results-grid"></div>
+                </div>
+            </section>
+
+            <!-- Webcam Section -->
+            <section id="webcam-section" class="hidden">
+                <div class="webcam-container">
+                    <div class="video-wrapper">
+                        <span class="label">Original</span>
+                        <video id="webcam-video" autoplay playsinline></video>
+                    </div>
+                    <div class="video-wrapper">
+                        <span class="label">Enhanced</span>
+                        <img id="enhanced-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Enhanced Frame">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="start-webcam" class="primary-btn">Start Camera</button>
+                    <button id="stop-webcam" class="secondary-btn hidden">Stop Stream</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Hidden canvas for capturing frames -->
+    <canvas id="hidden-canvas" class="hidden"></canvas>
+
+    <script src="app.js"></script>
+</body>
+</html>
