@@ -41,3 +41,4 @@ The server will start on `http://localhost:5001`.
 
 ## ⚖️ License
 MIT
+# clarity-ai-face-enhancer
