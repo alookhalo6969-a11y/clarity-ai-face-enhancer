@@ -13,15 +13,41 @@
         <div class="blob blob-2"></div>
     </div>
     
-    <div class="container">
+    <!-- Auth Overlay -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="glass-card auth-card">
+            <h2 id="auth-title">Login to Clarity AI</h2>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-type="login">Login</button>
+                <button class="auth-tab" data-type="signup">Sign Up</button>
+            </div>
+            <form id="auth-form">
+                <input type="email" id="auth-email" placeholder="Email Address" required>
+                <input type="password" id="auth-password" placeholder="Password" required>
+                <button type="submit" id="auth-submit" class="primary-btn">Continue</button>
+            </form>
+            <p id="auth-error" class="error-msg hidden" style="color:#ef4444; margin-top:10px; font-size:0.9rem"></p>
+        </div>
+    </div>
+
+    <div class="container main-content hidden" id="main-content">
         <header>
-            <h1>Clarity <span class="badge">AI</span></h1>
-            <p>Next-Gen Facial Enhancement & Synthesis</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+                <div>
+                    <h1>Clarity <span class="badge">AI</span></h1>
+                    <p>Next-Gen Facial Enhancement & Synthesis</p>
+                </div>
+                <div id="user-info" class="user-info" style="text-align:right">
+                    <span id="user-email" style="display:block; font-size:0.8rem; color:var(--text-muted)"></span>
+                    <button id="logout-btn" class="secondary-btn" style="padding: 4px 10px; font-size: 0.75rem; margin-top:5px">Logout</button>
+                </div>
+            </div>
         </header>
 
         <div class="tabs">
             <button class="tab-btn active" data-target="upload-section">Batch Process</button>
             <button class="tab-btn" data-target="webcam-section">Live Stream</button>
+            <button class="tab-btn" data-target="history-section" id="history-tab-btn">My History</button>
         </div>
 
         <main>
@@ -80,6 +106,15 @@
                 <div class="actions">
                     <button id="start-webcam" class="primary-btn">Start Camera</button>
                     <button id="stop-webcam" class="secondary-btn hidden">Stop Stream</button>
+                </div>
+            <!-- History Section -->
+            <section id="history-section" class="hidden">
+                <h2>Your Enhanced History</h2>
+                <div id="history-grid" class="grid" style="margin-top: 20px;">
+                    <!-- History items will be loaded here -->
+                </div>
+                <div id="history-empty" class="hidden" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <p>You haven't enhanced any images yet.</p>
                 </div>
             </section>
         </main>

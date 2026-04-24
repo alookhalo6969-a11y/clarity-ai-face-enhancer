@@ -1,10 +1,96 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Auth State
+    let currentUser = null;
+    let sessionToken = localStorage.getItem('sb-token');
+
+    // Auth Elements
+    const authOverlay = document.getElementById('auth-overlay');
+    const mainContent = document.getElementById('main-content');
+    const authForm = document.getElementById('auth-form');
+    const authTabs = document.querySelectorAll('.auth-tab');
+    const authTitle = document.getElementById('auth-title');
+    const authError = document.getElementById('auth-error');
+    const userEmailSpan = document.getElementById('user-email');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    let authMode = 'login'; // login or signup
+
+    // Tab switching for auth
+    authTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            authTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            authMode = tab.dataset.type;
+            authTitle.textContent = authMode === 'login' ? 'Login to Clarity AI' : 'Create an Account';
+            authError.classList.add('hidden');
+        });
+    });
+
+    // Handle Auth Submission
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        
+        authError.classList.add('hidden');
+        const endpoint = authMode === 'login' ? '/auth/login' : '/auth/signup';
+        
+        try {
+            const response = await fetch(`http://localhost:5001${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                if (authMode === 'signup') {
+                    alert('Signup successful! Please login.');
+                    authTabs[0].click(); // Switch to login
+                } else {
+                    currentUser = data.user;
+                    sessionToken = data.session.access_token;
+                    localStorage.setItem('sb-token', sessionToken);
+                    localStorage.setItem('user-email', currentUser.email);
+                    showMainApp();
+                }
+            } else {
+                authError.textContent = data.error;
+                authError.classList.remove('hidden');
+            }
+        } catch (err) {
+            authError.textContent = "Connection error";
+            authError.classList.remove('hidden');
+        }
+    });
+
+    function showMainApp() {
+        authOverlay.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        userEmailSpan.textContent = localStorage.getItem('user-email');
+    }
+
+    // Check existing session
+    if (sessionToken) {
+        showMainApp();
+    }
+
+    logoutBtn.addEventListener('click', async () => {
+        await fetch('http://localhost:5001/auth/logout', { method: 'POST' });
+        localStorage.clear();
+        window.location.reload();
+    });
+
     // Tab switching
     const tabBtns = document.querySelectorAll('.tab-btn');
     const sections = {
         'upload-section': document.getElementById('upload-section'),
         'webcam-section': document.getElementById('webcam-section')
     };
+
+    const historyTabBtn = document.getElementById('history-tab-btn');
+    const historyGrid = document.getElementById('history-grid');
+    const historyEmpty = document.getElementById('history-empty');
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -15,8 +101,47 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add active class to clicked
             btn.classList.add('active');
             sections[btn.dataset.target].classList.remove('hidden');
+
+            if (btn.dataset.target === 'history-section') {
+                loadHistory();
+            }
         });
     });
+
+    async function loadHistory() {
+        historyGrid.innerHTML = '';
+        historyEmpty.classList.add('hidden');
+        
+        try {
+            const response = await fetch('http://localhost:5001/user-history', {
+                headers: { 'Authorization': `Bearer ${sessionToken}` }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.history.length === 0) {
+                    historyEmpty.classList.remove('hidden');
+                } else {
+                    data.history.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'result-card';
+                        div.innerHTML = `
+                            <div class="result-images" style="aspect-ratio: 1/1;">
+                                <img src="http://localhost:5001${encodeURI(item.enhanced_url)}" alt="Enhanced" style="width: 100%;">
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                                <p style="font-size:0.8rem; color:#94a3b8; margin:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:60%;" title="${item.original_name}">${item.original_name}</p>
+                                <a href="http://localhost:5001${encodeURI(item.enhanced_url)}" download="${item.original_name.replace(/\.[^/.]+$/, "")}_enhanced.jpg" class="download-btn" style="padding: 4px 8px; font-size: 0.7rem;">Download</a>
+                            </div>
+                        `;
+                        historyGrid.appendChild(div);
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load history:', err);
+        }
+    }
 
     // --- Upload Logic ---
     const dropZone = document.getElementById('drop-zone');
@@ -114,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('http://localhost:5001/upload-images', {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${sessionToken}`
+                },
                 body: formData
             });
             const data = await response.json();

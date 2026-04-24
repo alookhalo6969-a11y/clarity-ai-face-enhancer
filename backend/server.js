@@ -7,6 +7,7 @@ const FormData = require('form-data');
 const fs = require('fs');
 const http = require('http');
 const WebSocket = require('ws');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +17,11 @@ const PORT = 5001;
 const FASTAPI_URL = 'http://127.0.0.1:8000';
 const FASTAPI_WS_URL = 'ws://127.0.0.1:8000/ws/enhance';
 
+// Supabase Configuration
+const SUPABASE_URL = 'https://bddtrsuxwddyybbajwxb.supabase.co';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your actual key
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -24,8 +30,53 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // File upload configuration
 const upload = multer({ dest: path.join(__dirname, '../uploads/') });
 
+// --- AUTH ENDPOINTS ---
+
+app.post('/auth/signup', async (req, res) => {
+    const { email, password } = req.body;
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true, user: data.user });
+});
+
+app.post('/auth/login', async (req, res) => {
+    const { email, password } = req.body;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true, user: data.user, session: data.session });
+});
+
+app.post('/auth/logout', async (req, res) => {
+    const { error } = await supabase.auth.signOut();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+});
+
+app.get('/user-history', authenticateUser, async (req, res) => {
+    const { data, error } = await supabase
+        .from('enhanced_images')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true, history: data });
+});
+
+// Auth Middleware
+const authenticateUser = async (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+
+    req.user = user;
+    next();
+};
+
 // API Route for uploading images and processing
-app.post('/upload-images', upload.array('images', 10), async (req, res) => {
+app.post('/upload-images', authenticateUser, upload.array('images', 10), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No images uploaded' });
@@ -58,9 +109,24 @@ app.post('/upload-images', upload.array('images', 10), async (req, res) => {
                 const resultPath = path.join(__dirname, '../results/', resultFilename);
                 fs.writeFileSync(resultPath, response.data);
 
+                const enhanced_url = `/results/${resultFilename}`;
+
+                // Save metadata to Supabase
+                const { error: dbError } = await supabase
+                    .from('enhanced_images')
+                    .insert([
+                        { 
+                            user_id: req.user.id, 
+                            original_name: file.originalname, 
+                            enhanced_url: enhanced_url 
+                        }
+                    ]);
+
+                if (dbError) console.error('Supabase DB Error:', dbError.message);
+
                 results.push({
                     original: file.originalname,
-                    enhanced_url: `/results/${resultFilename}`
+                    enhanced_url: enhanced_url
                 });
             } catch (fastApiError) {
                 console.error('Error contacting FastAPI:', fastApiError.message);
