@@ -19,6 +19,10 @@ app.add_middleware(
 
 enhancer = None
 
+@app.get("/")
+async def root():
+    return {"status": "AI Service is running", "endpoint": "/enhance"}
+
 @app.on_event("startup")
 async def startup_event():
     global enhancer
@@ -31,6 +35,7 @@ async def enhance_image(
     file: UploadFile = File(...),
     fidelity_weight: float = Form(0.5)
 ):
+    print(f"Received enhancement request for file: {file.filename}, fidelity: {fidelity_weight}")
     try:
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
@@ -81,4 +86,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8001)

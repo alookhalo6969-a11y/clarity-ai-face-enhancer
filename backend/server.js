@@ -7,19 +7,27 @@ const FormData = require('form-data');
 const fs = require('fs');
 const http = require('http');
 const WebSocket = require('ws');
-const { createClient } = require('@supabase/supabase-js');
+let createClient;
+try {
+    const supabaseJs = require('@supabase/supabase-js');
+    createClient = supabaseJs.createClient;
+} catch (e) {
+    console.warn('Supabase JS module not found, using local mock.');
+    createClient = require('./supabase-mock').createClient;
+}
+
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = 5001;
-const FASTAPI_URL = 'http://127.0.0.1:8000';
-const FASTAPI_WS_URL = 'ws://127.0.0.1:8000/ws/enhance';
+const FASTAPI_URL = 'http://127.0.0.1:8001';
+const FASTAPI_WS_URL = 'ws://127.0.0.1:8001/ws/enhance';
 
 // Supabase Configuration
 const SUPABASE_URL = 'https://bddtrsuxwddyybbajwxb.supabase.co';
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your actual key
+const SUPABASE_KEY = 'sb_publishable_cgIh8ZbimpUOE_fDRIWCow_uMVnAscV'; // Replace with your actual key
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Middleware
@@ -52,17 +60,6 @@ app.post('/auth/logout', async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/user-history', authenticateUser, async (req, res) => {
-    const { data, error } = await supabase
-        .from('enhanced_images')
-        .select('*')
-        .eq('user_id', req.user.id)
-        .order('created_at', { ascending: false });
-
-    if (error) return res.status(400).json({ error: error.message });
-    res.json({ success: true, history: data });
-});
-
 // Auth Middleware
 const authenticateUser = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
@@ -75,6 +72,17 @@ const authenticateUser = async (req, res, next) => {
     next();
 };
 
+app.get('/user-history', authenticateUser, async (req, res) => {
+    const { data, error } = await supabase
+        .from('enhanced_images')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true, history: data });
+});
+
 // API Route for uploading images and processing
 app.post('/upload-images', authenticateUser, upload.array('images', 10), async (req, res) => {
     try {
@@ -83,9 +91,9 @@ app.post('/upload-images', authenticateUser, upload.array('images', 10), async (
         }
 
         const results = [];
-        
+
         const fidelityWeight = req.body.fidelity_weight || '0.5';
-        
+
         // Process sequentially or in parallel depending on hardware capability
         for (const file of req.files) {
             const formData = new FormData();
@@ -103,7 +111,7 @@ app.post('/upload-images', authenticateUser, upload.array('images', 10), async (
 
                 // Sanitize filename to prevent URL breaking characters like '#' or spaces
                 const safeName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, '_');
-                
+
                 // Save result
                 const resultFilename = `enhanced_${Date.now()}_${safeName}.jpg`;
                 const resultPath = path.join(__dirname, '../results/', resultFilename);
@@ -115,10 +123,10 @@ app.post('/upload-images', authenticateUser, upload.array('images', 10), async (
                 const { error: dbError } = await supabase
                     .from('enhanced_images')
                     .insert([
-                        { 
-                            user_id: req.user.id, 
-                            original_name: file.originalname, 
-                            enhanced_url: enhanced_url 
+                        {
+                            user_id: req.user.id,
+                            original_name: file.originalname,
+                            enhanced_url: enhanced_url
                         }
                     ]);
 
@@ -208,11 +216,11 @@ wss.on('connection', (clientWs) => {
         console.error('FastAPI WebSocket Error:', err.message);
         fastApiReady = false;
         if (clientWs.readyState === WebSocket.OPEN) {
-            clientWs.send(JSON.stringify({ error: 'AI service connection failed. Make sure the Python server is running on port 8000.' }));
+            clientWs.send(JSON.stringify({ error: 'AI service connection failed. Make sure the Python server is running on port 8001.' }));
         }
     });
 });
 
-server.listen(PORT, () => {
-    console.log(`Node.js backend running on http://localhost:${PORT}`);
+server.listen(PORT, '127.0.0.1', () => {
+    console.log(`Node.js backend running on http://127.0.0.1:${PORT}`);
 });

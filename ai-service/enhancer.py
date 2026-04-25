@@ -81,7 +81,8 @@ class FaceEnhancer:
         self._load_models()
 
     def _load_models(self):
-        codeformer_model_path = 'CodeFormer/weights/CodeFormer/codeformer.pth'
+        # Correct path found in filesystem
+        codeformer_model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'CodeFormer', 'weights 2', 'codeformer.pth'))
 
         if not os.path.exists(codeformer_model_path):
             print(f"Model not found at {codeformer_model_path}. Please run setup.sh. Operating in MOCK mode.")
